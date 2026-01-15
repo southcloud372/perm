@@ -6,7 +6,7 @@ import { ACCOUNTS, fallbackAccount, getWalletClient, publicClient } from '../onc
 import { EXCHANGE_ADDRESS } from '../onchain/config';
 import { CandleData, OrderBookItem, OrderSide, OrderType, PositionSnapshot, Trade } from '../types';
 // Day 2 TODO: 取消注释以启用 IndexerClient
-import { client, GET_OPEN_ORDERS } from './IndexerClient';
+import { client, GET_OPEN_ORDERS, GET_RECENT_TRADES } from './IndexerClient';
 
 type OrderStruct = {
   id: bigint;
@@ -223,7 +223,47 @@ class ExchangeStore {
     // 3. 转换为 Trade 格式 (id, price, amount, time, side)
     // 4. side 判断: BigInt(buyOrderId) > BigInt(sellOrderId) ? 'buy' : 'sell'
     // 5. 使用 runInAction 更新 this.trades
+    try {
+    // 1. 调用Indexer查询成交记录
+    const result = await client.query(GET_RECENT_TRADES, {}).toPromise();
+    if (result.error || !result.data?.Trade) {
+      console.error('[loadTrades] 查询失败:', result.error);
+      return [];
+    }
+
+    // 2. 格式化成交数据为Trade类型
+    const formattedTrades = result.data.Trade.map((t: any) => {
+      // 转换精度：1e18 → 正常数值
+      const price = Number(formatEther(BigInt(t.price)));
+      const amount = Number(formatEther(BigInt(t.amount)));
+      // 格式化时间
+      const time = new Date(Number(t.timestamp) * 1000).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+      // 判断买卖方向（按订单ID大小）
+      const side = BigInt(t.buyOrderId) > BigInt(t.sellOrderId) ? 'buy' : 'sell';
+
+      return {
+        id: t.id,
+        price,
+        amount,
+        time,
+        side,
+      } as Trade;
+    });
+
+    // 3. 更新store的trades状态
+    runInAction(() => {
+      this.trades = formattedTrades;
+    });
+
+    return formattedTrades;
+  } catch (e) {
+    console.error('[loadTrades] 异常:', e);
     return [];
+  }
   };
 
   // ============================================
@@ -380,7 +420,7 @@ class ExchangeStore {
       });
 
       // Load Trades (Day 5)
-      // await this.loadTrades();
+      await this.loadTrades();
 
       // Load Candles (Day 5)
       // this.loadCandles();

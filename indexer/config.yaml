@@ -20,6 +20,8 @@ contracts:
       - event: MarginWithdrawn(address indexed trader, uint256 amount)
       - event: OrderPlaced(uint256 indexed id, address indexed trader, bool isBuy, uint256 price, uint256 amount)
       - event: OrderRemoved(uint256 indexed id)
+      - event: TradeExecuted(uint256 indexed buyOrderId, uint256 indexed sellOrderId, uint256 price, uint256 amount, address buyer, address seller)
+      - event: PositionUpdated(address indexed trader, int256 size, uint256 entryPrice)
 
 networks:
   - id: 31337  # Anvil local network
@@ -29,4 +31,4 @@ networks:
     contracts:
       - name: Exchange
         address:
-          - 0x84169a2577cd709258c0862afd0fc87a24b1a4e3
+          - 0xd04d77046a41d776ecfed8d61bade56920457d36

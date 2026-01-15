@@ -26,3 +26,21 @@ type Order @entity {
   status: String!  # "OPEN", "FILLED", "CANCELLED"
   timestamp: Int!
 }
+type Trade @entity {
+  id: ID!
+  buyer: String!
+  seller: String!
+  price: BigInt!
+  amount: BigInt!
+  timestamp: Int!
+  txHash: String!
+  buyOrderId: BigInt!
+  sellOrderId: BigInt!
+}
+
+type Position @entity {
+  id: ID!  # trader address
+  trader: String!
+  size: BigInt!
+  entryPrice: BigInt!
+}
