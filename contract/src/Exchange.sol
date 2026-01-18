@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "./modules/OrderBookModule.sol";
 import "./modules/ViewModule.sol";
+import "./modules/PricingModule.sol";
 
 /// @title MonadPerpExchange
 /// @notice A minimal non-production template for a perpetual DEX on Monad-style chains.

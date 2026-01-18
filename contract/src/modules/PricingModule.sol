@@ -16,6 +16,9 @@ abstract contract PricingModule is FundingModule {
         // 2. 调用 _calculateMarkPrice 计算标记价
         // 3. 更新 markPrice
         // 4. 触发 MarkPriceUpdated 事件
+        indexPrice = newIndexPrice;
+        markPrice = _calculateMarkPrice(newIndexPrice);
+        emit MarkPriceUpdated(markPrice, indexPrice);
     }
 
     /// @notice 计算标记价格
@@ -29,7 +32,35 @@ abstract contract PricingModule is FundingModule {
         // 2. 如果订单簿为空，返回 indexPrice_
         // 3. 计算 median(bestBid, bestAsk, indexPrice_)
         // 4. 钳位到 indexPrice_ ± 5%
-        return indexPrice_;
+         uint256 bestBid = bestBuyId == 0 ? 0 : orders[bestBuyId].price;
+        uint256 bestAsk = bestSellId == 0 ? 0 : orders[bestSellId].price;
+
+    // If both empty, return index
+        if (bestBid == 0 && bestAsk == 0) {
+            return indexPrice_;
+        }
+
+    // If one side empty, use index for that side
+        if (bestBid == 0) bestBid = indexPrice_;
+        if (bestAsk == 0) bestAsk = indexPrice_;
+
+    // Median of (Bid, Ask, Index) using bubble sort
+        uint256 a = bestBid;
+        uint256 b = bestAsk;
+        uint256 c = indexPrice_;
+    
+        if (a > b) (a, b) = (b, a);
+        if (b > c) (b, c) = (c, b);
+        if (a > b) (a, b) = (b, a);
+    
+        uint256 median = b;
+
+    // ±5% Deviation Clamp
+        uint256 maxDeviation = (indexPrice_ * 500) / 10_000;
+        if (median > indexPrice_ + maxDeviation) return indexPrice_ + maxDeviation;
+        if (indexPrice_ > maxDeviation && median < indexPrice_ - maxDeviation) return indexPrice_ - maxDeviation;
+
+        return median;
     }
 
     function _pullLatestPrice() internal virtual override(FundingModule) {

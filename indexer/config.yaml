@@ -31,4 +31,4 @@ networks:
     contracts:
       - name: Exchange
         address:
-          - 0xd04d77046a41d776ecfed8d61bade56920457d36
+          - 0x0e1b719227a333c13f99afdf1df91c82a0a9ea41
