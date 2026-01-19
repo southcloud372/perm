@@ -1,4 +1,4 @@
-import { Exchange, MarginEvent, Order, Position, Trade } from "../generated";
+import { Candle, Exchange, MarginEvent, Order, Position, Trade } from "../generated";
 
 Exchange.MarginDeposited.handler(async ({ event, context }) => {
     const entity: MarginEvent = {
@@ -64,6 +64,50 @@ Exchange.TradeExecuted.handler(async ({ event, context }) => {
         sellOrderId: event.params.sellOrderId,
     };
     context.Trade.set(trade);
+    // Day 5: 更新 K 线 (1m)
+const resolution = "1m";
+// 向下取整到最近的分钟
+const timestamp = event.block.timestamp - (event.block.timestamp % 60);
+const candleId = `${resolution}-${timestamp}`;
+
+const existingCandle = await context.Candle.get(candleId);
+
+if (!existingCandle) {
+    // 新 K 线：使用上一根 K 线的 close 作为 open
+    const latestCandleState = await context.LatestCandle.get("1");
+    const openPrice = latestCandleState ? latestCandleState.closePrice : event.params.price;
+    
+    const candle: Candle = {
+        id: candleId,
+        resolution,
+        timestamp,
+        openPrice: openPrice,
+        highPrice: event.params.price > openPrice ? event.params.price : openPrice,
+        lowPrice: event.params.price < openPrice ? event.params.price : openPrice,
+        closePrice: event.params.price,
+        volume: event.params.amount,
+    };
+    context.Candle.set(candle);
+} else {
+    // 更新现有 K 线
+    const newHigh = event.params.price > existingCandle.highPrice ? event.params.price : existingCandle.highPrice;
+    const newLow = event.params.price < existingCandle.lowPrice ? event.params.price : existingCandle.lowPrice;
+
+    context.Candle.set({
+        ...existingCandle,
+        highPrice: newHigh,
+        lowPrice: newLow,
+        closePrice: event.params.price,
+        volume: existingCandle.volume + event.params.amount,
+    });
+}
+
+// 更新全局最新价格状态
+context.LatestCandle.set({
+    id: "1",
+    closePrice: event.params.price,
+    timestamp: event.block.timestamp
+});
 
     // 2. 更新买卖双方订单的剩余量
     const buyOrder = await context.Order.get(event.params.buyOrderId.toString());

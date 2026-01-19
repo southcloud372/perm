@@ -6,8 +6,7 @@ import { ACCOUNTS, fallbackAccount, getWalletClient, publicClient } from '../onc
 import { EXCHANGE_ADDRESS } from '../onchain/config';
 import { CandleData, OrderBookItem, OrderSide, OrderType, PositionSnapshot, Trade } from '../types';
 // Day 2 TODO: 取消注释以启用 IndexerClient
-import { client, GET_OPEN_ORDERS, GET_RECENT_TRADES } from './IndexerClient';
-
+import { client, GET_CANDLES, GET_MY_TRADES, GET_OPEN_ORDERS, GET_RECENT_TRADES } from './IndexerClient';
 type OrderStruct = {
   id: bigint;
   trader: Address;
@@ -210,61 +209,35 @@ class ExchangeStore {
     // 3. 转换为 CandleData 格式 (time, open, high, low, close)
     //    注意: time 需要转为 ISO 字符串: new Date(c.timestamp * 1000).toISOString()
     // 4. 使用 runInAction 更新 this.candles
+    const result = await client.query(GET_CANDLES, {}).toPromise();
+    if (result.data?.Candle) {
+        const candles = result.data.Candle.map((c: any) => ({
+            time: new Date(c.timestamp * 1000).toISOString(),
+            open: Number(formatEther(c.openPrice)),
+            high: Number(formatEther(c.highPrice)),
+            low: Number(formatEther(c.lowPrice)),
+            close: Number(formatEther(c.closePrice)),
+        }));
+        runInAction(() => { this.candles = candles; });
+    }
   };
 
   // ============================================
   // Day 5 TODO: 从 Indexer 获取最近成交
   // ============================================
   loadTrades = async (): Promise<Trade[]> => {
-    // TODO: Day 5 - 实现从 Indexer 获取最近成交
-    // 步骤:
-    // 1. 使用 client.query(GET_RECENT_TRADES, {}).toPromise() 查询
-    // 2. 从 result.data?.Trade 获取成交数组
-    // 3. 转换为 Trade 格式 (id, price, amount, time, side)
-    // 4. side 判断: BigInt(buyOrderId) > BigInt(sellOrderId) ? 'buy' : 'sell'
-    // 5. 使用 runInAction 更新 this.trades
-    try {
-    // 1. 调用Indexer查询成交记录
     const result = await client.query(GET_RECENT_TRADES, {}).toPromise();
-    if (result.error || !result.data?.Trade) {
-      console.error('[loadTrades] 查询失败:', result.error);
-      return [];
-    }
-
-    // 2. 格式化成交数据为Trade类型
-    const formattedTrades = result.data.Trade.map((t: any) => {
-      // 转换精度：1e18 → 正常数值
-      const price = Number(formatEther(BigInt(t.price)));
-      const amount = Number(formatEther(BigInt(t.amount)));
-      // 格式化时间
-      const time = new Date(Number(t.timestamp) * 1000).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-      // 判断买卖方向（按订单ID大小）
-      const side = BigInt(t.buyOrderId) > BigInt(t.sellOrderId) ? 'buy' : 'sell';
-
-      return {
+    if (!result.data?.Trade) return [];
+    const trades = result.data.Trade.map((t: any) => ({
         id: t.id,
-        price,
-        amount,
-        time,
-        side,
-      } as Trade;
-    });
-
-    // 3. 更新store的trades状态
-    runInAction(() => {
-      this.trades = formattedTrades;
-    });
-
-    return formattedTrades;
-  } catch (e) {
-    console.error('[loadTrades] 异常:', e);
-    return [];
-  }
-  };
+        price: Number(formatEther(t.price)),
+        amount: Number(formatEther(t.amount)),
+        time: new Date(t.timestamp * 1000).toLocaleTimeString(),
+        side: BigInt(t.buyOrderId) > BigInt(t.sellOrderId) ? 'buy' : 'sell',
+    }));
+    runInAction(() => { this.trades = trades; });
+    return trades;
+};
 
   // ============================================
   // Day 2 TODO: 从 Indexer 获取用户订单
@@ -306,7 +279,17 @@ class ExchangeStore {
     // 3. 转换为 Trade 格式 (id, price, amount, time, side)
     // 4. side 判断: t.buyer.toLowerCase() === trader.toLowerCase() ? 'buy' : 'sell'
     // 5. 使用 runInAction 更新 this.myTrades
-    return [];
+    const result = await client.query(GET_MY_TRADES, { trader: trader.toLowerCase() }).toPromise();
+    if (!result.data?.Trade) return [];
+    const trades = result.data.Trade.map((t: any) => ({
+        id: t.id,
+        price: Number(formatEther(t.price)),
+        amount: Number(formatEther(t.amount)),
+        time: new Date(t.timestamp * 1000).toLocaleTimeString(),
+        side: t.buyer.toLowerCase() === trader.toLowerCase() ? 'buy' : 'sell',
+    }));
+    runInAction(() => { this.myTrades = trades; });
+    return trades;
   };
 
   refresh = async (silent = false) => {
@@ -362,6 +345,7 @@ class ExchangeStore {
           this.position = pos; // ========== 关键改动 2: 赋值真实的持仓数据 ==========
           this.myOrders = newOrders;
         });
+        await this.loadMyTrades(this.account);
       }
 
       let bidsRaw: OrderStruct[] = [];
@@ -423,7 +407,7 @@ class ExchangeStore {
       await this.loadTrades();
 
       // Load Candles (Day 5)
-      // this.loadCandles();
+       this.loadCandles();
 
     } catch (e) {
       if (!silent) {

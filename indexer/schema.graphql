@@ -44,3 +44,22 @@ type Position @entity {
   size: BigInt!
   entryPrice: BigInt!
 }
+
+# Day 5: Candle - K 线数据
+type Candle @entity {
+  id: ID!  # "1m-timestamp"
+  resolution: String!
+  timestamp: Int!
+  openPrice: BigInt!
+  highPrice: BigInt!
+  lowPrice: BigInt!
+  closePrice: BigInt!
+  volume: BigInt!
+}
+
+# Day 5: LatestCandle - 最新价格状态（用于新 K 线的 open 价格）
+type LatestCandle @entity {
+  id: ID!  # "1"
+  closePrice: BigInt!
+  timestamp: Int!
+}
