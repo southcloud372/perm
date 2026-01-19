@@ -1,7 +1,6 @@
 # === System ===
 .DS_Store
 *.log
-.env.local
 *.local
 
 # === Dependencies ===

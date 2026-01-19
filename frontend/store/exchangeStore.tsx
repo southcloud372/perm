@@ -407,7 +407,7 @@ class ExchangeStore {
       await this.loadTrades();
 
       // Load Candles (Day 5)
-       this.loadCandles();
+      await this.loadCandles();
 
     } catch (e) {
       if (!silent) {
