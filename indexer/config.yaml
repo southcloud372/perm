@@ -24,6 +24,7 @@ contracts:
       - event: PositionUpdated(address indexed trader, int256 size, uint256 entryPrice)
       - event: FundingUpdated(int256 cumulativeFundingRate, uint256 timestamp)
       - event: FundingPaid(address indexed trader, int256 amount)
+      - event: Liquidated(address indexed trader, address indexed liquidator, uint256 amount, uint256 fee)
 
 networks:
   - id: 31337  # Anvil local network
@@ -33,4 +34,4 @@ networks:
     contracts:
       - name: Exchange
         address:
-          - 0xe0ba413f8fb99fd6922ab12c42b6def2e51a5dc4
+          - 0xaa8fc0b157847da709111bb493344f6904b83540

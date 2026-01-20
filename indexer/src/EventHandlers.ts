@@ -1,4 +1,4 @@
-import { Candle, Exchange, FundingEvent, MarginEvent, Order, Position, Trade } from "../generated";
+import { Candle, Exchange, FundingEvent, Liquidation, MarginEvent, Order, Position, Trade } from "../generated";
 Exchange.MarginDeposited.handler(async ({ event, context }) => {
     const entity: MarginEvent = {
         id: `${event.transaction.hash}-${event.logIndex}`,
@@ -163,4 +163,30 @@ Exchange.FundingPaid.handler(async ({ event, context }) => {
         timestamp: event.block.timestamp,
     };
     context.FundingEvent.set(entity);
+});
+
+
+Exchange.Liquidated.handler(async ({ event, context }) => {
+    const entity: Liquidation = {
+        id: `${event.transaction.hash}-${event.logIndex}`,
+        trader: event.params.trader,
+        liquidator: event.params.liquidator,
+        amount: event.params.amount,
+        fee: event.params.fee,
+        timestamp: event.block.timestamp,
+        txHash: event.transaction.hash,
+    };
+    context.Liquidation.set(entity);
+    
+    // 清算后持仓应该归零或减少
+    const position = await context.Position.get(event.params.trader);
+    if (position) {
+        const newSize = position.size > 0n 
+            ? position.size - event.params.amount 
+            : position.size + event.params.amount;
+        context.Position.set({
+            ...position,
+            size: newSize,
+        });
+    }
 });

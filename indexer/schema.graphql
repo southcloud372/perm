@@ -72,3 +72,14 @@ type FundingEvent @entity {
   payment: BigInt     # 仅 USER_PAID 时有值
   timestamp: Int!
 }
+
+
+type Liquidation @entity {
+  id: ID!
+  trader: String!
+  liquidator: String!
+  amount: BigInt!
+  fee: BigInt!
+  timestamp: Int!
+  txHash: String!
+}

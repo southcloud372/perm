@@ -1,6 +1,6 @@
+import { observer } from 'mobx-react-lite';
 import React, { useMemo, useState } from 'react';
 import { formatEther } from 'viem';
-import { observer } from 'mobx-react-lite';
 import { useExchangeStore } from '../store/exchangeStore';
 import { OrderSide } from '../types';
 
@@ -62,7 +62,12 @@ export const Positions: React.FC = observer(() => {
     // TODO Day 7: 计算保证金率 (marginRatio)
     // marginRatio = (freeMargin + pnl) / positionValue * 100
     // 用于显示账户健康度
-    const marginRatio = 100; // 占位值，请实现计算逻辑
+    const marginRatio = (() => {
+    const marginBalance = freeMargin + pnl;  // margin + unrealizedPnl
+    const positionValue = mark * absSize;
+    if (positionValue === 0) return 100;
+    return (marginBalance / positionValue) * 100;
+})();
 
     return {
       symbol: 'ETH',
@@ -113,7 +118,7 @@ export const Positions: React.FC = observer(() => {
                   <th className="pb-3 text-right">Entry Price</th>
                   <th className="pb-3 text-right">Mark Price</th>
                   <th className="pb-3 text-right">Liq. Price</th>
-                  {/* TODO Day 7: 添加 Health 列表头 */}
+                  <th className="pb-3 text-right">Health</th>
                   <th className="pb-3 text-right">PnL (ROE%)</th>
                 </tr>
               </thead>
@@ -143,6 +148,15 @@ export const Positions: React.FC = observer(() => {
                         - 黄色 (2-5%): 警告
                         - 绿色 (>5%): 安全
                     */}
+                    <td className="py-3 text-right font-mono">
+                        <span className={
+                            displayPosition.marginRatio < 2 ? 'text-red-500' :
+                            displayPosition.marginRatio < 5 ? 'text-yellow-500' :
+                            'text-green-500'
+                        }>
+                            {displayPosition.marginRatio.toFixed(1)}%
+                        </span>
+                    </td>
                     <td className="py-3 text-right font-mono">
                       <div className={displayPosition.pnl >= 0 ? 'text-nebula-teal' : 'text-nebula-pink'}>
                         {displayPosition.pnl >= 0 ? '+' : ''}
