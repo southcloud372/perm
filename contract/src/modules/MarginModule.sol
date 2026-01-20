@@ -102,11 +102,34 @@ abstract contract MarginModule is LiquidationModule {
 
     /// @notice 确保提现后仍满足维持保证金要求
     function _ensureWithdrawKeepsMaintenance(address trader, uint256 amount) internal view {
-        // TODO: 请实现此函数
         // 步骤:
         // 1. 如果没有持仓，直接返回
         // 2. 计算提现后的 marginBalance
         // 3. 计算持仓价值和维持保证金
         // 4. require(marginBalance >= maintenance)
+        Account storage a = accounts[trader];
+        Position memory p = a.position;
+
+        // 1. 无持仓直接放行
+        if (p.size == 0) return;
+
+        // 2. 计算提现后的保证金余额
+        uint256 marginAfterWithdraw = a.margin - amount;
+        
+        // 3. 计算未实现盈亏（使用 markPrice，和测试预期一致）
+        int256 unrealizedPnl = _unrealizedPnl(p);
+        
+        // 4. 计算总保证金余额 = 提现后保证金 + 未实现盈亏
+        int256 totalMargin = int256(marginAfterWithdraw) + unrealizedPnl;
+        
+        // 5. 计算维持保证金（关键：使用 markPrice 计算持仓价值，而非 entryPrice）
+        uint256 positionValue = (uint256(SignedMath.abs(int256(p.size))) * markPrice) / 1e18;
+        uint256 maintenanceMargin = (positionValue * maintenanceMarginBps) / 10_000;
+
+        // 6. 临界值判断：>= 而不是 >，允许刚好等于维持保证金（修复核心边界）
+        require(
+            totalMargin >= int256(maintenanceMargin),
+            "withdraw would trigger liquidation"
+        );
     }
 }

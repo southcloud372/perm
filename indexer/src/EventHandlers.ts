@@ -1,5 +1,4 @@
-import { Candle, Exchange, MarginEvent, Order, Position, Trade } from "../generated";
-
+import { Candle, Exchange, FundingEvent, MarginEvent, Order, Position, Trade } from "../generated";
 Exchange.MarginDeposited.handler(async ({ event, context }) => {
     const entity: MarginEvent = {
         id: `${event.transaction.hash}-${event.logIndex}`,
@@ -139,4 +138,29 @@ Exchange.PositionUpdated.handler(async ({ event, context }) => {
         entryPrice: event.params.entryPrice,
     };
     context.Position.set(position);
+});
+
+
+Exchange.FundingUpdated.handler(async ({ event, context }) => {
+    const entity: FundingEvent = {
+        id: `${event.transaction.hash}-${event.logIndex}`,
+        eventType: "GLOBAL_UPDATE",
+        trader: undefined,
+        cumulativeRate: event.params.cumulativeFundingRate,
+        payment: undefined,
+        timestamp: event.block.timestamp,
+    };
+    context.FundingEvent.set(entity);
+});
+
+Exchange.FundingPaid.handler(async ({ event, context }) => {
+    const entity: FundingEvent = {
+        id: `${event.transaction.hash}-${event.logIndex}`,
+        eventType: "USER_PAID",
+        trader: event.params.trader,
+        cumulativeRate: undefined,
+        payment: event.params.amount,
+        timestamp: event.block.timestamp,
+    };
+    context.FundingEvent.set(entity);
 });

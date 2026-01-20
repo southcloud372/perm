@@ -314,12 +314,23 @@ class ExchangeStore {
         address,
       });
       runInAction(() => {
-        this.markPrice = mark;
-        this.indexPrice = index;
-        this.initialMarginBps = imBps;
-        // Funding Rate calculation to be implemented in Day 6
-        this.fundingRate = 0;
-      });
+      this.markPrice = mark;
+      this.indexPrice = index;
+      this.initialMarginBps = imBps;
+      
+      const m = Number(formatEther(mark));
+      const i = Number(formatEther(index));
+      const premiumIndex = (m - i) / i;
+      const interestRate = 0.0001; // 0.01%
+      const clampRange = 0.0005;   // 0.05%
+
+      let diff = interestRate - premiumIndex;
+      if (diff > clampRange) diff = clampRange;
+      if (diff < -clampRange) diff = -clampRange;
+
+      this.fundingRate = premiumIndex + diff;
+
+    });
 
       if (this.account) {
         // ========== 关键改动 1: 并发获取 margin + getPosition + myOrders ==========
@@ -418,6 +429,7 @@ class ExchangeStore {
         runInAction(() => (this.syncing = false));
       }
     }
+    
   };
 
   // ============================================
