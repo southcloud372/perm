@@ -236,7 +236,7 @@ abstract contract OrderBookModule is MarginModule {
 
     /// @notice 清算用户
     /// @dev Day 6: 强制平仓
-    function liquidate(address trader, uint256 amount) external virtual nonReentrant {
+    function liquidate(address trader, uint256 amount) external virtual override nonReentrant {
         // TODO: 请实现此函数
         // 步骤:
         // 1. 检查不能自我清算
@@ -250,12 +250,12 @@ abstract contract OrderBookModule is MarginModule {
     }
 
     /// @notice 清算卖单撮合 (市价)
-    function _matchLiquidationSell(Order memory incoming) internal {
+    function _matchLiquidationSell(Order memory incoming) internal override{
         // TODO: 请实现此函数
     }
 
     /// @notice 清算买单撮合 (市价)
-    function _matchLiquidationBuy(Order memory incoming) internal {
+    function _matchLiquidationBuy(Order memory incoming) internal override{
         // TODO: 请实现此函数
     }
 }
