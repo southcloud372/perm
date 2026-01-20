@@ -92,7 +92,7 @@ abstract contract LiquidationModule is PricingModule {
 
     /// @notice 清除用户所有挂单
     /// @param trader 用户地址
-    function _clearTraderOrders(address trader) internal returns (uint256 freedLocked) {
+    function _clearTraderOrders(address trader) internal returns (uint256) {
         // 步骤:
         // 1. 遍历买单链表，删除该用户的订单
         // 2. 遍历卖单链表，删除该用户的订单

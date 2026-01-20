@@ -136,9 +136,7 @@ abstract contract FundingModule is ExchangeStorage {
     
         // 多仓：(标记价 - 开仓价) * 持仓量 / 开仓价
         // 空仓：(开仓价 - 标记价) * 持仓量 / 开仓价
-        int256 priceDiff = p.size > 0 
-            ? int256(markPrice) - int256(p.entryPrice)
-            : int256(p.entryPrice) - int256(markPrice);
+        int256 priceDiff = int256(markPrice) - int256(p.entryPrice);
         
         return (priceDiff * int256(p.size)) / 1e18;
     }
